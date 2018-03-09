@@ -156,8 +156,8 @@ func setupKeyBindings(g *gocui.Gui, samtvs *samtv.SmartViewSession, keyBindings 
 		genKeyhandler(samtvs, "KEY_RETURN")))
 	errs = append(errs, g.SetKeybinding("main", gocui.KeyBackspace2, gocui.ModNone,
 		genKeyhandler(samtvs, "KEY_RETURN")))
-	//errs = append(errs, g.SetKeybinding("main", gocui.KeySpace, gocui.ModNone,
-	//	genKeyhandler(samtvs, "KEY_PLAY")))
+	errs = append(errs, g.SetKeybinding("main", gocui.KeySpace, gocui.ModNone,
+		genKeyhandler(samtvs, "KEY_PLAY")))
 	errs = append(errs, g.SetKeybinding("main", gocui.KeyArrowLeft, gocui.ModNone,
 		genKeyhandler(samtvs, "KEY_LEFT")))
 	errs = append(errs, g.SetKeybinding("main", gocui.KeyArrowDown, gocui.ModNone,

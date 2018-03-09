@@ -30,6 +30,7 @@ var tuiDefaultBindings = map[rune]string{
 	'g': "KEY_GUIDE",
 	'i': "KEY_INFO",
 	'L': "KEY_CH_LIST",
+	'H': "KEY_HOME",
 	'R': "KEY_RED",
 	'G': "KEY_GREEN",
 	'B': "KEY_BLUE",
