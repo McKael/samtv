@@ -1,0 +1,262 @@
+#! /bin/zsh
+#
+# Basic zsh/curses Samsung TV remote based on samtvcli.
+#
+# Copyright (C) 2018 Mikael Berthe <mikael@lilotux.net>
+
+zmodload zsh/curses
+
+integer DBG
+
+command -v samtvcli >/dev/null || exit
+
+local -a opts
+
+if [[ $1 == --server=* ]]; then
+    opts+=$1
+fi
+
+function tv {
+    samtvcli $opts "$@">/dev/null 2>&1
+}
+
+function tv.key {
+    tv key "$@">/dev/null 2>&1
+}
+
+function tv.status {
+    tv status "$@"
+}
+
+#function tv.channel {
+#    tv channel "$@"
+#}
+
+typeset -a cmdhelp
+
+# TODO: test the following:
+# - KEY_HOME
+# - KEY_SLEEP
+# - KEY_OPEN
+# - KEY_PIP_ONOFF
+# - KEY_CONTENTS (smart apps)
+
+cmdhelp=(
+    "q"         "Quit TVRemote"
+    "P"         "Power"
+    "<enter>"   "OK"
+    "<down>/<up>"     "Arrows"
+    "<left>/<right>"  "Arrows"
+    "h/j/k/l"       "Vi-like arrows"
+    "PgUp/PgDown"   "Page Up/Down"
+    "<backspace>"   "Back"
+    "+/-"       "CH+/CH-"
+    "<space>"   "Play"
+    '"'     "Pause"
+    "p"     "Stop"
+    "*,/"   "Vol+/Vol-"
+    "m"     "Toggle mute"
+
+    "Q" "Exit"
+    "M" "Menu"
+    "H" "Home"
+    "s" "Source"
+    "t" "TV"
+    "d" "HDMI"
+    "g" "Guide"
+    "i" "Info"
+    "L" "Channel List"
+    "A" "App List"
+
+    "0-9"     "0-9 keys"
+    "</>"     "Rewind/Fast forward"
+    "R/G/B/Y" "Red/Green/Blue/Yellow"
+    "&/é"     "HDMI1/HDMI2" # Azerty-friendly bindings...
+
+    "D" "Toggle TVRemote debug"
+    "?" "Display TVRemote help"
+)
+
+function help {
+    zcurses clear mainw
+    zcurses string mainw "Samsung TVRemote"
+    integer i=0
+    while (( i < ${#cmdhelp}/2 )); do
+        zcurses move mainw $(( i+2 )) 0
+        zcurses string mainw "${cmdhelp[$((2*i+1))]}"
+        zcurses move mainw $(( i+2 )) 20
+        zcurses string mainw "${cmdhelp[$((2*i+2))]}"
+        (( i++ ))
+    done
+    zcurses move mainw 1 0
+}
+
+function loop {
+    local REPLY key
+    while [[ -z $REPLY ]]; do
+        zcurses input mainw REPLY key
+        case $key in
+            (UP)
+                tv.key KEY_UP
+                ;;
+            (DOWN)
+                tv.key KEY_DOWN
+                ;;
+            (RIGHT)
+                tv.key KEY_RIGHT
+                ;;
+            (LEFT)
+                tv.key KEY_LEFT
+                ;;
+            (BACKSPACE)
+                tv.key KEY_RETURN
+                ;;
+            ("")
+                [[ -z $REPLY ]] && break
+                case $REPLY in
+                    ("q")
+                        break
+                        ;;
+                    ($'\x0c') # Ctrl-L
+                        zcurses clear mainw redraw
+                        help
+                        #zcurses refresh mainw
+                        ;;
+                    ($'\x0a') # Enter
+                        tv.key KEY_ENTER
+                        ;;
+                    ($'\x08') # Backspace
+                        tv.key KEY_RETURN
+                        ;;
+                    ('`')
+                        tv.key KEY_PRECH
+                        ;;
+                    (" ")
+                        tv.key KEY_PLAY
+                        ;;
+                    ('"')
+                        tv.key KEY_PAUSE
+                        ;;
+                    ("P")
+                        tv.key KEY_POWER
+                        ;;
+                    ("Q")
+                        tv.key KEY_EXIT
+                        ;;
+                    (0|1|2|3|4|5|6|7|8|9)
+                        tv.key KEY_"$REPLY"
+                        ;;
+                    ("p")
+                        tv.key KEY_STOP
+                        ;;
+                    ("m")
+                        tv.key KEY_MUTE
+                        ;;
+                    ("M")
+                        tv.key KEY_MENU
+                        ;;
+                    ("g")
+                        tv.key KEY_GUIDE
+                        ;;
+                    ("i")
+                        tv.key KEY_INFO
+                        ;;
+                    ("L")
+                        tv.key KEY_CH_LIST
+                        ;;
+                    ("A")
+                        tv.key KEY_APP_LIST
+                        ;;
+                    ("H")
+                        tv.key KEY_HOME
+                        ;;
+                    ("&")
+                        tv.key KEY_HDMI1
+                        ;;
+                    ("é")
+                        tv.key KEY_HDMI2
+                        ;;
+                    ("<")
+                        tv.key KEY_REWIND # FIXME
+                        ;;
+                    (">")
+                        tv.key KEY_FORWARD # FIXME
+                        ;;
+                    ("*")
+                        tv.key KEY_VOLUP
+                        ;;
+                    ("/")
+                        tv.key KEY_VOLDOWN
+                        ;;
+                    ("+")
+                        tv.key KEY_CHUP
+                        ;;
+                    ("-")
+                        tv.key KEY_CHDOWN
+                        ;;
+                    ("h")
+                        tv.key KEY_LEFT
+                        ;;
+                    ("j")
+                        tv.key KEY_DOWN
+                        ;;
+                    ("k")
+                        tv.key KEY_UP
+                        ;;
+                    ("s")
+                        tv.key KEY_SOURCE
+                        ;;
+                    ("d")
+                        tv.key KEY_HDMI
+                        ;;
+                    ("t")
+                        tv.key KEY_TV
+                        ;;
+                    ("l")
+                        tv.key KEY_RIGHT
+                        ;;
+                    ("R")
+                        tv.key KEY_RED
+                        ;;
+                    ("G")
+                        tv.key KEY_GREEN
+                        ;;
+                    ("B")
+                        tv.key KEY_BLUE
+                        ;;
+                    ("Y")
+                        tv.key KEY_YELLOW
+                        ;;
+                    ("D")
+                        (( DBG = DBG ^ 1 ))
+                        ;;
+                    ("?")
+                        help
+                        ;;
+                    (*) (( DBG )) && (print -rn -- "${REPLY}" |
+                            xxd; echo -en "\r") >&2 ;;
+                esac
+                ;;
+            (*) (( DBG )) && (print -rn -- "${key}" | xxd; echo -en "\r") >&2 ;;
+        esac
+        REPLY=
+        key=
+    done
+}
+
+## MAIN ##
+
+{
+    zcurses init
+
+    zcurses addwin mainw $(( $LINES - 2 )) $(( $COLUMNS - 2 )) 1 1
+    zcurses scroll mainw on
+
+    help
+
+    loop
+} always {
+    zcurses delwin mainw
+    zcurses end
+    exit
+}
