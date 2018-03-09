@@ -282,7 +282,7 @@ func GetKeyCodeList() (list []string) {
 
 // Key sends a key to the TV device
 func (s *SmartViewSession) Key(key string) error {
-	if s == nil || s.ws.state != stateConnected {
+	if s == nil {
 		return errors.New("Key called but no established connection")
 	}
 	if key == "" {
@@ -291,6 +291,17 @@ func (s *SmartViewSession) Key(key string) error {
 	}
 
 	// TODO:  check the key id is in the list
+
+	s.ws.mux.Lock()
+	if s.ws.state == stateNotConnected {
+		s.ws.mux.Unlock()
+		logrus.Debug("Key: need to open new websocket")
+		if err := s.InitSession(); err != nil {
+			return errors.Wrap(err, "failed to open websocket connection")
+		}
+	} else {
+		s.ws.mux.Unlock()
+	}
 
 	return s.sendKey(key)
 }

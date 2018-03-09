@@ -61,8 +61,10 @@ func (s *SmartViewSession) openWSConnection() error {
 		return errors.Wrap(err, "cannot connect to Websocket")
 	}
 
+	s.ws.mux.Lock()
 	s.ws.c = c
 	s.ws.state = stateOpeningSocket
+	s.ws.mux.Unlock()
 	go s.manageWS()
 	// FIXME stopper
 
@@ -70,21 +72,30 @@ func (s *SmartViewSession) openWSConnection() error {
 }
 
 func (s *SmartViewSession) manageWS() {
+	s.ws.mux.Lock()
 	if s == nil || s.ws.c == nil {
+		s.ws.mux.Unlock()
+		logrus.Debugf("manageWS: websocket connection is closed")
 		return
 	}
+	s.ws.mux.Unlock()
 
 LOOP:
 	for {
 		msg, err := s.readWSMessage() // XXX timeout?
 		s.ws.mux.Lock()
-		if s.ws.state == stateNotconnected {
+		if s.ws.state == stateNotConnected {
 			s.ws.mux.Unlock()
 			break LOOP
 		}
 		s.ws.mux.Unlock()
 		if err != nil {
 			logrus.Error("socket read failed: ", err)
+			s.ws.mux.Lock()
+			s.ws.state = stateNotConnected
+			s.ws.c.Close()
+			s.ws.c = nil
+			s.ws.mux.Unlock()
 			break LOOP
 		}
 
@@ -162,7 +173,7 @@ func (s *SmartViewSession) Close() { // TODO error
 	logrus.Debug("Closing websocket")
 
 	s.ws.mux.Lock()
-	s.ws.state = stateNotconnected
+	s.ws.state = stateNotConnected
 	s.ws.c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	s.ws.c.Close()
 	s.ws.c = nil

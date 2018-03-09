@@ -49,7 +49,7 @@ type SmartViewSession struct {
 
 // Values for the SmartViewSession.ws.state field
 const (
-	stateNotconnected = iota
+	stateNotConnected = iota
 	stateOpeningSocket
 	stateHandshakeSent
 	stateConnected
@@ -102,10 +102,13 @@ func (s *SmartViewSession) InitSession() error {
 	}
 
 	// Is connection initiated?
-	if s.ws.c != nil {
+	s.ws.mux.Lock()
+	if s.ws.c != nil || s.ws.state != stateNotConnected {
+		s.ws.mux.Unlock()
 		logrus.Info("InitSession called but a connection is already open")
 		return nil
 	}
+	s.ws.mux.Unlock()
 
 	if err := s.openWSConnection(); err != nil {
 		return errors.Wrap(err, "cannot initiate connection")
