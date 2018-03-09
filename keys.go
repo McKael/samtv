@@ -339,18 +339,6 @@ func (s *SmartViewSession) sendKey(text string) error {
 	m = <-s.ws.read
 	logrus.Infof("TV message: `%s`", m)
 
-	/*
-		if m, err := s.readWSMessage(); err == nil {
-			//logrus.Info("TV response: ", m)
-			r, err := s.parseSmartMessage(m)
-			if err != nil {
-				logrus.Info("Failed to parse TV response: ", err)
-				return nil // XXX error?
-			}
-			logrus.Infof("Reply: `%s`", r)
-		}
-	*/
-
 	return nil
 }
 
