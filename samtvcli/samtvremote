@@ -35,7 +35,6 @@ function tv.status {
 typeset -a cmdhelp
 
 # TODO: test the following:
-# - KEY_HOME
 # - KEY_SLEEP
 # - KEY_OPEN
 # - KEY_PIP_ONOFF
