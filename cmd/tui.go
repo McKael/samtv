@@ -33,6 +33,8 @@ import (
 
 var logHeight = 7 // Log window height
 
+var tuiLogFile *string
+
 // tuiCmd represents the tui command
 var tuiCmd = &cobra.Command{
 	Use:   "tui",
@@ -52,9 +54,24 @@ var tuiCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(tuiCmd)
+
+	tuiLogFile = tuiCmd.Flags().String("log-file", "", "Write logs to file")
 }
 
 func tui(samtvSession *samtv.SmartViewSession) {
+	if *tuiLogFile != "" {
+		if f, err := os.OpenFile(*tuiLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600); err != nil {
+			logrus.Fatal("Could not open log file: ", err) // XXX
+			//logrus.SetLevel(logrus.FatalLevel)
+		} else {
+			logrus.Info("Redirecting messages to log file '%s'", *tuiLogFile)
+			logrus.SetOutput(f)
+			defer f.Close()
+		}
+	} else {
+		logrus.SetLevel(logrus.FatalLevel)
+	}
+
 	g, err := gocui.NewGui(gocui.OutputNormal)
 	if err != nil {
 		logrus.Panicln(err) // XXX
@@ -122,7 +139,6 @@ func layout(g *gocui.Gui) error {
 		v.Title = "Log"
 		v.Wrap = true
 		v.Autoscroll = true
-		//logrus.SetOutput(v)
 	}
 
 	return nil
@@ -198,7 +214,7 @@ func uiToggleDebug(g *gocui.Gui, v *gocui.View) error {
 
 func genKeyhandler(s *samtv.SmartViewSession, keyID string) func(*gocui.Gui, *gocui.View) error {
 	return func(g *gocui.Gui, v *gocui.View) error {
-		printLog(g, "> Send Key %s\n", keyID)
+		printLog(g, "> Send Key %s", keyID)
 		if err := s.Key(keyID); err != nil {
 			logrus.Error("Cannot send key: ", err)
 		}
