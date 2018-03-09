@@ -110,9 +110,6 @@ func layout(g *gocui.Gui) error {
 	maxX, maxY := g.Size()
 
 	logHeight = maxY / 3
-	if debug {
-		logHeight *= 2
-	}
 
 	// Main window
 	if v, err := g.SetView("main", 0, 0, maxX-1, maxY-logHeight-2); err != nil {
@@ -208,7 +205,7 @@ func uiToggleDebug(g *gocui.Gui, v *gocui.View) error {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 	debug = !debug
-	printLog(g, "> Debug: %v\n", debug)
+	printLog(g, "> Debug: %v", debug)
 	return nil
 }
 
