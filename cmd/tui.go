@@ -21,7 +21,9 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/jroimartin/gocui"
@@ -61,19 +63,17 @@ func init() {
 func tui(samtvSession *samtv.SmartViewSession) {
 	if *tuiLogFile != "" {
 		if f, err := os.OpenFile(*tuiLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600); err != nil {
-			logrus.Fatal("Could not open log file: ", err) // XXX
+			logrus.Fatal("Could not open log file: ", err)
 		} else {
 			logrus.Infof("Redirecting messages to log file '%s'", *tuiLogFile)
 			logrus.SetOutput(f)
 			defer f.Close()
 		}
-	} else {
-		logrus.SetLevel(logrus.FatalLevel)
 	}
 
 	g, err := gocui.NewGui(gocui.OutputNormal)
 	if err != nil {
-		logrus.Panicln(err) // XXX
+		logrus.Fatal(err)
 	}
 	defer g.Close()
 
@@ -135,6 +135,23 @@ func layout(g *gocui.Gui) error {
 		v.Title = "Log"
 		v.Wrap = true
 		v.Autoscroll = true
+
+		if *tuiLogFile == "" {
+			// We need to pass logs through gocui.Update in
+			// order to avoid race conditions.
+			r, w := io.Pipe()
+			logrus.SetOutput(w)
+			go func() {
+				scanner := bufio.NewScanner(r)
+				for scanner.Scan() {
+					text := scanner.Text()
+					g.Update(func(*gocui.Gui) error {
+						_, e := fmt.Fprintln(v, text)
+						return e
+					})
+				}
+			}()
+		}
 	}
 
 	return nil
