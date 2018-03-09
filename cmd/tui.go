@@ -36,6 +36,7 @@ import (
 var logHeight = 7 // Log window height
 
 var tuiLogFile *string
+var tuiLogWriter *io.PipeWriter
 
 // tuiCmd represents the tui command
 var tuiCmd = &cobra.Command{
@@ -97,7 +98,12 @@ func tui(samtvSession *samtv.SmartViewSession) {
 	}
 
 	err = g.MainLoop()
-	logrus.SetOutput(os.Stderr) // Restore logging output
+	if tuiLogWriter != nil {
+		tuiLogWriter.Close()
+	} else {
+		logrus.SetOutput(os.Stderr) // Restore logging output
+	}
+
 	if err != nil && err != gocui.ErrQuit {
 		logrus.Fatal(err)
 	}
@@ -141,6 +147,7 @@ func layout(g *gocui.Gui) error {
 			// order to avoid race conditions.
 			r, w := io.Pipe()
 			logrus.SetOutput(w)
+			tuiLogWriter = w
 			go func() {
 				scanner := bufio.NewScanner(r)
 				for scanner.Scan() {
@@ -150,6 +157,9 @@ func layout(g *gocui.Gui) error {
 						return e
 					})
 				}
+
+				logrus.SetOutput(os.Stderr)              // Restore logging output
+				logrus.Debug("Leaving log pipe routine") // DBG
 			}()
 		}
 	}
