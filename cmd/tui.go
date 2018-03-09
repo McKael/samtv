@@ -62,9 +62,8 @@ func tui(samtvSession *samtv.SmartViewSession) {
 	if *tuiLogFile != "" {
 		if f, err := os.OpenFile(*tuiLogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600); err != nil {
 			logrus.Fatal("Could not open log file: ", err) // XXX
-			//logrus.SetLevel(logrus.FatalLevel)
 		} else {
-			logrus.Info("Redirecting messages to log file '%s'", *tuiLogFile)
+			logrus.Infof("Redirecting messages to log file '%s'", *tuiLogFile)
 			logrus.SetOutput(f)
 			defer f.Close()
 		}
@@ -100,7 +99,7 @@ func tui(samtvSession *samtv.SmartViewSession) {
 	err = g.MainLoop()
 	logrus.SetOutput(os.Stderr) // Restore logging output
 	if err != nil && err != gocui.ErrQuit {
-		logrus.Panicln(err)
+		logrus.Fatal(err)
 	}
 
 	return
@@ -195,7 +194,7 @@ func printLog(g *gocui.Gui, format string, args ...interface{}) {
 		fmt.Println(err)
 		return
 	}
-	fmt.Fprintf(logView, "\n%s", message)
+	fmt.Fprintf(logView, "%s\n", message)
 }
 
 func uiToggleDebug(g *gocui.Gui, v *gocui.View) error {
