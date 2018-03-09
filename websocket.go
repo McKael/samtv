@@ -123,6 +123,7 @@ LOOP:
 			s.ws.read <- msg
 		case msg == smartMessageKeepalive:
 			logrus.Debug("SmartView keepalive message received")
+			s.sendWSMessage(smartMessageKeepalive)
 		case strings.HasPrefix(msg, smartMessageCommPrefix):
 			logrus.Debug("SmartView message received")
 			if smsg, err := s.parseSmartMessage(msg); err != nil {
@@ -140,6 +141,8 @@ LOOP:
 
 // sendWSMessage sends a raw WebSocket message
 func (s *SmartViewSession) sendWSMessage(m string) error {
+	s.ws.mux.Lock()
+	defer s.ws.mux.Unlock()
 	if s.ws.c == nil {
 		return errors.New("sendWSMessage: no active websocket connection")
 	}
@@ -149,11 +152,15 @@ func (s *SmartViewSession) sendWSMessage(m string) error {
 
 // readWSMessage reads a WebSocket message
 func (s *SmartViewSession) readWSMessage() (string, error) {
+	s.ws.mux.Lock()
 	if s.ws.c == nil {
+		s.ws.mux.Unlock()
 		return "", errors.New("readWSMessage: no active websocket connection")
 	}
 	logrus.Debugf("Reading WS message...")
-	t, p, err := s.ws.c.ReadMessage()
+	c := s.ws.c
+	s.ws.mux.Unlock()
+	t, p, err := c.ReadMessage()
 	if err != nil {
 		return "", err
 	}
@@ -165,18 +172,18 @@ func (s *SmartViewSession) readWSMessage() (string, error) {
 }
 
 // Close terminates the websocket connection
-func (s *SmartViewSession) Close() { // TODO error
+func (s *SmartViewSession) Close() {
+	s.ws.mux.Lock()
+	defer s.ws.mux.Unlock()
+
 	if s.ws.c == nil {
 		return // Already closed
 	}
 
 	logrus.Debug("Closing websocket")
 
-	s.ws.mux.Lock()
 	s.ws.state = stateNotConnected
 	s.ws.c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	s.ws.c.Close()
 	s.ws.c = nil
-	s.ws.mux.Unlock()
-	// FIXME TODO : stop socket manager
 }
