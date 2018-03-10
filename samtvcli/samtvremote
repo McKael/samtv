@@ -2,6 +2,9 @@
 #
 # Basic zsh/curses Samsung TV remote based on samtvcli.
 #
+# Please note that "samtvcli tui" should be more performant as it uses a
+# persistent connection.
+#
 # Copyright (C) 2018 Mikael Berthe <mikael@lilotux.net>
 
 zmodload zsh/curses
