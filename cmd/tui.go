@@ -25,8 +25,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/jroimartin/gocui"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -237,6 +239,15 @@ func uiToggleDebug(g *gocui.Gui, v *gocui.View) error {
 
 func genKeyhandler(s *samtv.SmartViewSession, keyID string) func(*gocui.Gui, *gocui.View) error {
 	return func(g *gocui.Gui, v *gocui.View) error {
+		if strings.HasPrefix(keyID, "TUI_") {
+			return tuiInternalCommand(g, v, keyID)
+		}
+
+		if !strings.HasPrefix(keyID, "KEY_") {
+			return errors.New("invalid key identifier in shortcut")
+		}
+
+		// This is a Samsung key
 		printLog(g, "> Send Key %s", keyID)
 
 		go func() {
@@ -256,4 +267,12 @@ func genKeyhandler(s *samtv.SmartViewSession, keyID string) func(*gocui.Gui, *go
 		}()
 		return nil
 	}
+}
+
+func tuiInternalCommand(g *gocui.Gui, v *gocui.View, keyID string) error {
+	switch keyID {
+	case "TUI_QUIT":
+		return uiQuit(g, v)
+	}
+	return nil
 }
