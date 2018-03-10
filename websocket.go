@@ -63,6 +63,9 @@ func (s *SmartViewSession) openWSConnection() error {
 		return errors.Wrap(err, "cannot connect to Websocket")
 	}
 
+	// Set up initial read timeout
+	c.SetReadDeadline(time.Now().Add(time.Minute))
+
 	s.ws.mux.Lock()
 	s.ws.c = c
 	s.ws.state = stateOpeningSocket
@@ -84,7 +87,7 @@ func (s *SmartViewSession) manageWS() {
 
 LOOP:
 	for {
-		msg, err := s.readWSMessage() // XXX timeout?
+		msg, err := s.readWSMessage()
 		s.ws.mux.Lock()
 		if s.ws.state == stateNotConnected {
 			s.ws.mux.Unlock()
@@ -92,7 +95,7 @@ LOOP:
 		}
 		s.ws.mux.Unlock()
 		if err != nil {
-			logrus.Error("socket read failed: ", err)
+			logrus.Info("socket read failed: ", err)
 			s.ws.mux.Lock()
 			s.ws.state = stateNotConnected
 			s.ws.c.Close()
@@ -126,6 +129,7 @@ LOOP:
 		case msg == smartMessageKeepalive:
 			logrus.Debug("SmartView keepalive message received")
 			s.sendWSMessage(smartMessageKeepalive)
+			s.ws.c.SetReadDeadline(time.Now().Add(time.Minute))
 		case strings.HasPrefix(msg, smartMessageCommPrefix):
 			logrus.Debug("SmartView message received")
 			if smsg, err := s.parseSmartMessage(msg); err != nil {
@@ -149,6 +153,7 @@ func (s *SmartViewSession) sendWSMessage(m string) error {
 		return errors.New("sendWSMessage: no active websocket connection")
 	}
 	logrus.Debugf("Sending WS message: `%s` ...", m)
+	s.ws.c.SetWriteDeadline(time.Now().Add(15 * time.Second))
 	return s.ws.c.WriteMessage(websocket.TextMessage, []byte(m))
 }
 
