@@ -36,6 +36,8 @@ const (
 	smartMessageHello      = "1::/com.samsung.companion"
 	smartMessageKeepalive  = "2::"
 	smartMessageCommPrefix = "5::/com.samsung.companion:"
+
+	smartMessageUsualCorrectReply = `"result":{}}`
 )
 
 func (s *SmartViewSession) openWSConnection() error {
@@ -151,6 +153,7 @@ func (s *SmartViewSession) sendWSMessage(m string) error {
 }
 
 // readWSMessage reads a WebSocket message
+// This method is intended to be used by manageWS.
 func (s *SmartViewSession) readWSMessage() (string, error) {
 	s.ws.mux.Lock()
 	if s.ws.c == nil {

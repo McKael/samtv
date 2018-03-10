@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
@@ -127,6 +128,21 @@ func (s *SmartViewSession) InitSession() error {
 	}
 
 	return nil
+}
+
+// GetMessage returns the next message received from the device
+// If block is true, the read will block for 5 seconds.
+func (s *SmartViewSession) GetMessage(block bool) string {
+	delay := time.Millisecond
+	if block {
+		delay = time.Second * 5
+	}
+	select {
+	case msg := <-s.ws.read:
+		return msg
+	case <-time.After(delay):
+		return ""
+	}
 }
 
 func fetchURL(url string) (string, error) {
