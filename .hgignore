@@ -1,3 +1,8 @@
 syntax: glob
 
+samtvcli/doc/doc
+samtvcli/doc/manual
+samtvcli/builds
+samtvcli/samtvcli
+
 *.sw[op]
