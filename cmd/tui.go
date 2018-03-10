@@ -24,6 +24,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -31,12 +32,14 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"mikael/samtv"
 )
 
 var logHeight = 7 // Log window height
 
+var tuiKeybindingsConfigFile *string
 var tuiLogFile *string
 var tuiLogWriter *io.PipeWriter
 
@@ -46,12 +49,30 @@ var tuiCmd = &cobra.Command{
 	Short: "Text User Interface",
 	Long:  `This command runs a curses text user interface.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// Load keybindings
+		tuiBindingsYAML := tuiDefaultBindingsYAML
+		keybindingsFile := viper.GetString("keybindings")
+		if keybindingsFile != "" {
+			// User-provided bindings
+			cfbytes, err := ioutil.ReadFile(keybindingsFile)
+			if err != nil {
+				logrus.Fatal("Could not read key bindings configuration file: ", err)
+			}
+			logrus.Debugf("Loading keybindings file '%s'", keybindingsFile)
+			tuiBindingsYAML = string(cfbytes)
+		}
+		if err := tuiLoadKeyBindings(tuiBindingsYAML); err != nil {
+			logrus.Fatal("Could not read key bindings configuration: ", err)
+		}
+
+		// Start SmartView Session
 		samtvSession, err := initSession()
 		if err != nil {
 			logrus.Error("Cannot initialize session: ", err)
 			os.Exit(1)
 		}
 
+		// Run TUI
 		tui(samtvSession)
 		samtvSession.Close()
 	},
@@ -61,6 +82,10 @@ func init() {
 	RootCmd.AddCommand(tuiCmd)
 
 	tuiLogFile = tuiCmd.Flags().String("log-file", "", "Write logs to file")
+	tuiKeybindingsConfigFile = tuiCmd.Flags().String("keybindings", "",
+		"Path to keybindings config file (YAML)")
+
+	viper.BindPFlag("keybindings", tuiCmd.Flags().Lookup("keybindings"))
 }
 
 func tui(samtvSession *samtv.SmartViewSession) {
@@ -95,8 +120,8 @@ func tui(samtvSession *samtv.SmartViewSession) {
 		logrus.Panicln(err)
 	}
 
-	if err := setupKeyBindings(g, samtvSession, tuiDefaultBindings); err != nil {
-		logrus.Panicln("Cannot setup key bindings: ", err)
+	if err := setupKeyBindings(g, samtvSession, tuiCurrentBindings); err != nil {
+		logrus.Fatal("Cannot setup key bindings: ", err)
 	}
 
 	err = g.MainLoop()
@@ -169,7 +194,7 @@ func layout(g *gocui.Gui) error {
 	return nil
 }
 
-func setupKeyBindings(g *gocui.Gui, samtvs *samtv.SmartViewSession, keyBindings map[rune]string) error {
+func setupKeyBindings(g *gocui.Gui, samtvs *samtv.SmartViewSession, keyBindings map[string]string) error {
 	var errs []error
 
 	errs = append(errs, g.SetKeybinding("", gocui.KeyCtrlQ, gocui.ModNone, uiQuit))
@@ -195,7 +220,8 @@ func setupKeyBindings(g *gocui.Gui, samtvs *samtv.SmartViewSession, keyBindings 
 	errs = append(errs, g.SetKeybinding("main", gocui.KeyCtrlSlash, gocui.ModNone, uiToggleDebug))
 
 	for k, code := range keyBindings { // FIXME check nil
-		errs = append(errs, g.SetKeybinding("main", k, gocui.ModNone, genKeyhandler(samtvs, code)))
+		kr := rune(k[0]) // FIXME
+		errs = append(errs, g.SetKeybinding("main", kr, gocui.ModNone, genKeyhandler(samtvs, code)))
 	}
 
 	for _, err := range errs {
