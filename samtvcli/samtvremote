@@ -72,8 +72,9 @@ cmdhelp=(
     "R/G/B/Y" "Red/Green/Blue/Yellow"
     "&/é"     "HDMI1/HDMI2" # Azerty-friendly bindings...
 
-    "D" "Toggle TVRemote debug"
-    "?" "Display TVRemote help"
+    "D"     "Toggle TVRemote debug"
+    "<C-x>" "Quit URemote"
+    "?"     "Display TVRemote help"
 )
 
 function help {
@@ -113,7 +114,7 @@ function loop {
             ("")
                 [[ -z $REPLY ]] && break
                 case $REPLY in
-                    ("q")
+                    ("q"|$'\x18') # q/Ctrl-x
                         break
                         ;;
                     ($'\x0c') # Ctrl-L
