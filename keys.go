@@ -336,8 +336,16 @@ func (s *SmartViewSession) sendKey(text string) error {
 		return err
 	}
 
-	m = <-s.ws.read
-	logrus.Infof("TV message: `%s`", m)
+	m = s.GetMessage(true)
+	if m == "" {
+		return errors.New("no reply from TV")
+	}
+
+	logrus.Debugf("TV message: `%s`", m)
+
+	if m != smartMessageUsualCorrectReply {
+		return errors.New("incorrect TV reply")
+	}
 
 	return nil
 }
