@@ -142,7 +142,7 @@ LOOP:
 			logrus.Info("SmartView unhandled message: ", msg)
 		}
 	}
-	logrus.Info("[DEBUG] Out of manageWS loop")
+	logrus.Debug("Leaving manageWS loop")
 }
 
 // sendWSMessage sends a raw WebSocket message
