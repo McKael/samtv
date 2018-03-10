@@ -238,9 +238,22 @@ func uiToggleDebug(g *gocui.Gui, v *gocui.View) error {
 func genKeyhandler(s *samtv.SmartViewSession, keyID string) func(*gocui.Gui, *gocui.View) error {
 	return func(g *gocui.Gui, v *gocui.View) error {
 		printLog(g, "> Send Key %s", keyID)
-		if err := s.Key(keyID); err != nil {
-			logrus.Error("Cannot send key: ", err)
-		}
+
+		go func() {
+			var msg string
+			if err := s.Key(keyID); err != nil {
+				msg = fmt.Sprintf("Failed to send Key %s", keyID)
+				logrus.Error("Cannot send key: ", err)
+			} else {
+				msg = fmt.Sprintf("Key sent successfully (%s)", keyID)
+			}
+			// Use gocui.Update to display log message since we're
+			// in a goroutine
+			g.Update(func(*gocui.Gui) error {
+				printLog(g, msg)
+				return nil
+			})
+		}()
 		return nil
 	}
 }
