@@ -1,7 +1,12 @@
 package cmd
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/ghodss/yaml"
+	"github.com/pkg/errors"
 )
 
 var tuiCurrentBindings map[string]string
@@ -9,7 +14,6 @@ var tuiCurrentBindings map[string]string
 // This is a default YAML configuration for the key bindings,
 // it can serve as an example as well.
 const tuiDefaultBindingsYAML = "  \"`\": " + `KEY_PRECH
-  " ": KEY_PLAY
   "\"": KEY_PAUSE
   "*": KEY_VOLUP
   "+": KEY_CHUP
@@ -58,4 +62,69 @@ func tuiLoadKeyBindings(yamlText string) error {
 
 	tuiCurrentBindings = b
 	return nil
+}
+
+func tuiListKeyBindings(maxWidth int) string {
+	bk := make([]string, len(tuiCurrentBindings))
+	maxLen := 0
+	i := 0
+	for k, a := range tuiCurrentBindings {
+		bk[i] = k
+		i++
+		l := len(k) + len(a)
+		if l > maxLen {
+			maxLen = l
+		}
+	}
+	sort.Strings(bk)
+
+	ncol := maxWidth / (maxLen + 10)
+	switch {
+	case ncol < 1:
+		ncol = 1
+	case ncol > 4:
+		ncol = 4
+	}
+	colW := maxWidth/ncol - 1
+
+	var b strings.Builder
+	i = 0
+	n := len(bk)
+	displayed := 0
+
+	for displayed < n {
+		idx := ((n+ncol-1)/ncol)*(i%ncol) + i/ncol
+		i++
+		if idx >= n {
+			if i%ncol == 0 {
+				b.WriteString("\n")
+			}
+			continue
+		}
+		k := bk[idx]
+		a := tuiCurrentBindings[k]
+		fmt.Fprintf(&b, " %s -> %s", k, a)
+		displayed++
+		if i%ncol == 0 {
+			b.WriteString("\n")
+			continue
+		}
+		if displayed == n {
+			break
+		}
+		fmt.Fprintf(&b, strings.Repeat(" ", colW-4-len(k)-len(a)))
+	}
+
+	return b.String()
+}
+
+func getKeyFromString(k string) (interface{}, error) {
+	if len(k) == 1 {
+		return rune(k[0]), nil
+	}
+	if k == "" {
+		return nil, errors.New("empty key string")
+	}
+	// TODO: Add special keys here...
+	return nil, errors.New("unsupported key identifier")
 }

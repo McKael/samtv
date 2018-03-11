@@ -109,6 +109,7 @@ func tui(samtvSession *samtv.SmartViewSession) {
 
 	// For now, don't allow small windows
 	if maxX < 80 || maxY < 23 {
+		g.Close()
 		logrus.Fatalln("ERROR: Window size is too small: minimum size is 80x23")
 	}
 
@@ -121,6 +122,7 @@ func tui(samtvSession *samtv.SmartViewSession) {
 	}
 
 	if err := setupKeyBindings(g, samtvSession, tuiCurrentBindings); err != nil {
+		g.Close()
 		logrus.Fatal("Cannot setup key bindings: ", err)
 	}
 
@@ -150,13 +152,22 @@ func layout(g *gocui.Gui) error {
 		}
 
 		v.Title = "SamTVcli TUI"
-		v.Wrap = true
-		v.Autoscroll = true
+		v.Wrap = false
+		v.Autoscroll = false
 		// v.Editable = false
 		// v.SelFgColor = gocui.ColorYellow
 		g.SetCurrentView("main")
 
-		//fmt.Fprintf(v, ...)
+		helpMessage := `Persistent bindings:
+C-q:         Quit samtvcli              PgUp/PgDown:    Scroll up/down
+Enter:       KEY_ENTER                  BackSpace:      KEY_RETURN
+Left/Right:  KEY_LEFT/RIGHT             Up/Down:        KEY_UP/DOWN
+Space:       KEY_PLAY
+
+Dynamic bindings:
+` + tuiListKeyBindings(maxX-2)
+		fmt.Fprint(v, helpMessage)
+
 	}
 
 	// Log window
@@ -199,6 +210,9 @@ func setupKeyBindings(g *gocui.Gui, samtvs *samtv.SmartViewSession, keyBindings 
 
 	errs = append(errs, g.SetKeybinding("", gocui.KeyCtrlQ, gocui.ModNone, uiQuit))
 
+	errs = append(errs, g.SetKeybinding("main", gocui.KeyPgup, gocui.ModNone, scrollPageUp))
+	errs = append(errs, g.SetKeybinding("main", gocui.KeyPgdn, gocui.ModNone, scrollPageDown))
+
 	// XXX hardcoded
 	errs = append(errs, g.SetKeybinding("main", gocui.KeyEnter, gocui.ModNone,
 		genKeyhandler(samtvs, "KEY_ENTER")))
@@ -219,9 +233,17 @@ func setupKeyBindings(g *gocui.Gui, samtvs *samtv.SmartViewSession, keyBindings 
 
 	errs = append(errs, g.SetKeybinding("main", gocui.KeyCtrlSlash, gocui.ModNone, uiToggleDebug))
 
-	for k, code := range keyBindings { // FIXME check nil
-		kr := rune(k[0]) // FIXME
-		errs = append(errs, g.SetKeybinding("main", kr, gocui.ModNone, genKeyhandler(samtvs, code)))
+	if keyBindings != nil {
+		for k, code := range keyBindings {
+			// Check k validity
+			kr, err := getKeyFromString(k)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			errs = append(errs, g.SetKeybinding("main", kr,
+				gocui.ModNone, genKeyhandler(samtvs, code)))
+		}
 	}
 
 	for _, err := range errs {
@@ -301,4 +323,32 @@ func tuiInternalCommand(g *gocui.Gui, v *gocui.View, keyID string) error {
 		return uiQuit(g, v)
 	}
 	return nil
+}
+
+func scrollPageUp(g *gocui.Gui, v *gocui.View) error {
+	ox, oy := v.Origin()
+
+	if oy < 1 {
+		return nil
+	}
+
+	_, h := v.Size()
+	oy -= h / 2
+	if oy < 0 {
+		oy = 0
+	}
+
+	return v.SetOrigin(ox, oy)
+}
+
+func scrollPageDown(g *gocui.Gui, v *gocui.View) error {
+	ox, oy := v.Origin()
+
+	_, h := v.Size()
+	oy += h / 2
+	if oy >= strings.Count(v.Buffer(), "\n") {
+		return nil // Ignore
+	}
+
+	return v.SetOrigin(ox, oy)
 }
