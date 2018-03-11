@@ -19,6 +19,10 @@ const tuiDefaultBindingsYAML = "  \"`\": " + `KEY_PRECH
   "+": KEY_CHUP
   "-": KEY_CHDOWN
   "/": KEY_VOLDOWN
+  "<": KEY_REWIND
+  ">": KEY_FF
+  "(": KEY_REWIND_
+  ")": KEY_FF_
   "0": KEY_0
   "1": KEY_1
   "2": KEY_2

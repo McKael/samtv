@@ -1,11 +1,5 @@
 # This is a configuration file for key bindings in YAML format
 
-  "\"": KEY_PAUSE
-  "*": KEY_VOLUP
-  "+": KEY_CHUP
-  "`": KEY_PRECH
-  "-": KEY_CHDOWN
-  "/": KEY_VOLDOWN
   "0": KEY_0
   "1": KEY_1
   "2": KEY_2
@@ -16,6 +10,16 @@
   "7": KEY_7
   "8": KEY_8
   "9": KEY_9
+  "\"": KEY_PAUSE
+  "*": KEY_VOLUP
+  "+": KEY_CHUP
+  "`": KEY_PRECH
+  "-": KEY_CHDOWN
+  "/": KEY_VOLDOWN
+  "<": KEY_REWIND
+  ">": KEY_FF
+  "(": KEY_REWIND_
+  ")": KEY_FF_
   "B": KEY_BLUE
   "G": KEY_GREEN
   "H": KEY_HOME
