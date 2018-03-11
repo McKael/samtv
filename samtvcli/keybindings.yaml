@@ -1,3 +1,5 @@
+# This is a configuration file for key bindings in YAML format
+
   "\"": KEY_PAUSE
   "*": KEY_VOLUP
   "+": KEY_CHUP
