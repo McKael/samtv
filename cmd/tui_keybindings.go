@@ -42,6 +42,7 @@ const tuiDefaultBindingsYAML = "  \"`\": " + `KEY_PRECH
   "Q": KEY_EXIT
   "R": KEY_RED
   "Y": KEY_YELLOW
+  "c": KEY_CONTENTS
   "d": KEY_HDMI
   "g": KEY_GUIDE
   "h": KEY_LEFT
