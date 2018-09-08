@@ -45,7 +45,7 @@ var RootCmd = &cobra.Command{
 	Use:   AppName,
 	Short: "A CLI remote for Samsung smart TVs",
 	Long: `This utility is a command-line interface to send commands to a
-Samung "Smart TV" model 2014+.`,
+Samung "Smart TV" model H/J (2014/2015).`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

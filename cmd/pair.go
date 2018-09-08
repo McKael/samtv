@@ -35,7 +35,7 @@ var pairingPIN *int
 // pairCmd represents the events command
 var pairCmd = &cobra.Command{
 	Use:   "pair",
-	Short: "Pair with a Smart TV (not implemented)", // XXX
+	Short: "Pair with a Smart TV",
 	Long:  `This command can be used to manage pairing with a Samsung TV.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		s, err := samtv.NewSmartViewSession(server)
