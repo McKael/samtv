@@ -58,8 +58,6 @@ func (s *SmartViewSession) Pair(pin int) (string, int, string, error) {
 	}
 
 	// A PIN code was provided.  Process with pairing...
-
-	// _, err := s.pairingExternalStep(1, pin, "")
 	if err := s.pairingSteps(pin); err != nil {
 		return "", 0, "", err
 	}
