@@ -21,28 +21,47 @@
 package samtv
 
 import (
+	"bytes"
+	"encoding/hex"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	"github.com/McKael/smartcrypto"
 )
 
-// XXX
-// (uuid, sid, key, error)
+// smartAuthData contains Samsung's Smart TV auth_data response format
+type smartAuthData struct {
+	AuthType     string  `json:"auth_type"`
+	RequestID    string  `json:"request_id"`
+	SessionID    *string `json:"session_id"`
+	ClientHello  *string `json:"GeneratorClientHello"`
+	ClientAckMsg *string `json:"ClientAckMsg"`
+}
+
+// Pair handles pairing with the TV device
+// If the pin is 0, the PIN popup is requested.
+// It returns (deviceid, sessionid, key, error).
 func (s *SmartViewSession) Pair(pin int) (string, int, string, error) {
 	if pin <= 0 {
 		logrus.Info("Requesting PIN popup...")
 		return "", 0, "", s.pairingPopup()
 	}
 
-	result, err := s.pairingExternalStep(1, pin, "")
-	if err != nil {
+	/*
+		_, err := s.pairingExternalStep(1, pin, "")
+		if err != nil {
+			return "", 0, "", err
+		}
+	*/
+	if err := s.pairingSteps(pin); err != nil {
 		return "", 0, "", err
 	}
-
-	logrus.Info(result) // DBG
 
 	// Done -- let's close PIN page
 	pinClosePageURL := "http://" + s.tvAddress + ":8080/ws/apps/CloudPINPage/run"
@@ -52,12 +71,18 @@ func (s *SmartViewSession) Pair(pin int) (string, int, string, error) {
 		logrus.Info(err) // DBG level
 	}
 	if resp, err := client.Do(req); err != nil {
-		logrus.Info("could not close PIN page: ", err)
+		logrus.Info("Could not close PIN page: ", err)
 	} else {
 		resp.Body.Close()
 	}
 
-	return s.uuid, s.sessionID, result[0:32], nil
+	return s.uuid, s.sessionID, hex.EncodeToString(s.sessionKey), nil
+}
+
+func (s *SmartViewSession) getTVPairingStepURL(step int) string {
+	const appID = "samtvcli"
+	return "http://" + s.tvAddress + ":8080/ws/pairing?step=" + strconv.Itoa(step) +
+		"&app_id=" + appID + "&device_id=" + s.uuid + "&type=1"
 }
 
 func (s *SmartViewSession) pairingPopup() error {
@@ -81,14 +106,140 @@ func (s *SmartViewSession) pairingPopup() error {
 	}
 	logrus.Debugf("PIN page response: `%s`", body)
 
-	step0URL := "http://" + s.tvAddress + ":8080/ws/pairing?step=0" +
-		"&app_id=com.samsung.companion&device_id=" + s.uuid +
-		"&type=1"
+	step0URL := s.getTVPairingStepURL(0)
 
 	r, err := fetchURL(step0URL)
 	if err != nil {
 		return errors.Wrap(err, "pairing failed")
 	}
 	logrus.Debugf("Pairing request response: `%s`", r)
+	return nil
+}
+
+func (s *SmartViewSession) postTVPairingStep(step int, data string) (string, error) {
+	stepURL := s.getTVPairingStepURL(step)
+	resp, err := http.Post(stepURL, "application/json", bytes.NewBufferString(data))
+	if err != nil {
+		return "", errors.Wrap(err, "failed to send data to the TV")
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrap(err, "could not read device response")
+	}
+	logrus.Debugf("Step #%d response: `%s`", step, body)
+
+	var response = struct {
+		AuthData string `json:"auth_data"`
+	}{}
+	err = json.Unmarshal([]byte(body), &response)
+	if err != nil {
+		return "", errors.Wrap(err, "could not decode TV response")
+	}
+	return response.AuthData, nil
+}
+
+func (s *SmartViewSession) pairingSteps(pin int) error {
+	const userID = "654321"
+
+	handshake := smartcrypto.HelloData{
+		UserID: userID,
+		PIN:    strconv.Itoa(pin),
+	}
+
+	// Step #1 - Exchange Hello
+	logrus.Debugf("Starting pairing step #1 (hello exchange)")
+
+	serverHello, err := smartcrypto.GenerateServerHello(&handshake)
+	if err != nil {
+		return errors.Wrap(err, "could not generate ServerHello")
+	}
+
+	sh := hex.EncodeToString(serverHello)
+
+	logrus.Debugf("Server AES key: %v", handshake.Key)
+	logrus.Debugf("Server ctx hash: %v", handshake.Ctx)
+	logrus.Debugf("ServerHello: %s", sh)
+
+	content := `{"auth_data":{"auth_type":"SPC","GeneratorServerHello":"` + sh + `"}}`
+
+	body, err := s.postTVPairingStep(1, content)
+	if err != nil {
+		return errors.Wrap(err, "post step #1")
+	}
+
+	logrus.Debugf("Step #1 response body: `%s`", body)
+
+	var step1Response smartAuthData
+	err = json.Unmarshal([]byte(body), &step1Response)
+	if err != nil {
+		return errors.Wrap(err, "step1 failed")
+	}
+	if step1Response.ClientHello == nil {
+		return errors.Wrap(err, "could not get TV ClientHello")
+	}
+
+	lastRequestID := step1Response.RequestID
+
+	logrus.Debugf("Request id: `%s`", step1Response.RequestID)
+	logrus.Debugf("Client hello: `%s`", *step1Response.ClientHello)
+
+	// Check client hello
+
+	skprime, ctx, err := smartcrypto.ParseClientHello(handshake, *step1Response.ClientHello)
+	if err != nil {
+		return errors.Wrap(err, "could not parse TV ClientHello")
+	}
+	logrus.Debugf("SKPrime: `%v`", skprime)
+	logrus.Debugf("ctx: `%v`", ctx)
+
+	// Step #2 - Acknowledge Exchange
+	logrus.Debugf("Starting pairing step #2 (acknowledge exchange)")
+
+	serverAck, err := smartcrypto.GenerateServerAcknowledge(skprime)
+	if err != nil {
+		return errors.Wrap(err, "failed to generate server acknowledge")
+	}
+
+	content = `{"auth_data":{"auth_type":"SPC","request_id":"` + lastRequestID + `","ServerAckMsg":"` + serverAck + `"}}`
+	logrus.Debugf("Step #2 content: %s", content)
+
+	body, err = s.postTVPairingStep(2, content)
+	if err != nil {
+		return errors.Wrap(err, "post step #2")
+	}
+
+	logrus.Debugf("Step #2 response body: `%s`", body)
+	var step2Response smartAuthData
+	err = json.Unmarshal([]byte(body), &step2Response)
+	if err != nil {
+		return errors.Wrap(err, "step2 failed")
+	}
+
+	if step2Response.SessionID == nil {
+		return errors.Wrap(err, "could not get the session ID")
+	}
+	if step2Response.ClientAckMsg == nil {
+		return errors.Wrap(err, "could not get TV ClientAcknowledge")
+	}
+
+	clientAck := *step2Response.ClientAckMsg
+	sessionID := *step2Response.SessionID
+	sid, err := strconv.Atoi(sessionID)
+	if err != nil {
+		return errors.Wrap(err, "step3: cannot convert session ID to number")
+	}
+
+	if err := smartcrypto.ParseClientAcknowledge(clientAck, skprime); err != nil {
+		return errors.Wrap(err, "step3: client ack validation failed")
+	}
+	logrus.Debugf("Client acknowledge is valid")
+
+	logrus.Info("Pairing successful!")
+
+	s.RestoreSessionData([]byte(ctx), sid, "")
+
 	return nil
 }
