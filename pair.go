@@ -27,7 +27,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -48,10 +50,14 @@ type smartAuthData struct {
 // If the pin is 0, the PIN popup is requested.
 // It returns (deviceid, sessionid, key, error).
 func (s *SmartViewSession) Pair(pin int) (string, int, string, error) {
-	if pin <= 0 {
-		logrus.Info("Requesting PIN popup...")
-		return "", 0, "", s.pairingPopup()
+	if pin < 0 {
+		return "", 0, "", s.closePINPage()
 	}
+	if pin == 0 {
+		return "", 0, "", s.startPairing()
+	}
+
+	// A PIN code was provided.  Process with pairing...
 
 	// _, err := s.pairingExternalStep(1, pin, "")
 	if err := s.pairingSteps(pin); err != nil {
@@ -59,7 +65,7 @@ func (s *SmartViewSession) Pair(pin int) (string, int, string, error) {
 	}
 
 	// Done -- let's close PIN page
-	if err := s.closePairingPopup(); err != nil {
+	if err := s.closePINPage(); err != nil {
 		logrus.Info("Could not close PIN page: ", err)
 	}
 
@@ -72,28 +78,37 @@ func (s *SmartViewSession) getTVPairingStepURL(step int) string {
 		"&app_id=" + appID + "&device_id=" + s.uuid + "&type=1"
 }
 
-func (s *SmartViewSession) closePairingPopup() error {
-	pinClosePageURL := "http://" + s.tvAddress + ":8080/ws/apps/CloudPINPage/run"
-	client := &http.Client{}
-	req, err := http.NewRequest("DELETE", pinClosePageURL, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	return nil
-}
-
-func (s *SmartViewSession) pairingPopup() error {
+func (s *SmartViewSession) startPairing() error {
 	if s == nil || s.uuid == "" || s.tvAddress == "" {
 		return errors.New("SmartViewSession not initialized")
 	}
 
 	logrus.Debugf("Initiating step #0")
 
+	st, err := s.checkPINPage()
+	if err != nil {
+		st = "stopped"
+		logrus.Info("Could not fetch PIN page status: ", err)
+	}
+	logrus.Debugf("PIN page is %s", st)
+	if st != "running" {
+		logrus.Info("Requesting PIN page popup...")
+		if err := s.openPINPage(); err != nil {
+			return errors.Wrap(err, "could not open PIN page")
+		}
+	}
+
+	step0URL := s.getTVPairingStepURL(0)
+
+	r, err := fetchURL(step0URL)
+	if err != nil {
+		return errors.Wrap(err, "pairing request failed")
+	}
+	logrus.Debugf("Pairing request response: `%s`", r)
+	return nil
+}
+
+func (s *SmartViewSession) openPINPage() error {
 	pinPageURL := "http://" + s.tvAddress + ":8080/ws/apps/CloudPINPage"
 	resp, err := http.PostForm(pinPageURL, url.Values{"data": {"pin4"}})
 	if err != nil {
@@ -108,14 +123,47 @@ func (s *SmartViewSession) pairingPopup() error {
 	}
 	logrus.Debugf("PIN page response: `%s`", body)
 
-	step0URL := s.getTVPairingStepURL(0)
-
-	r, err := fetchURL(step0URL)
-	if err != nil {
-		return errors.Wrap(err, "pairing failed")
-	}
-	logrus.Debugf("Pairing request response: `%s`", r)
 	return nil
+}
+
+func (s *SmartViewSession) closePINPage() error {
+	pinClosePageURL := "http://" + s.tvAddress + ":8080/ws/apps/CloudPINPage/run"
+	client := &http.Client{}
+	req, err := http.NewRequest("DELETE", pinClosePageURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return nil
+}
+
+func (s *SmartViewSession) checkPINPage() (string, error) {
+	pinPageURL := "http://" + s.tvAddress + ":8080/ws/apps/CloudPINPage"
+	resp, err := http.Get(pinPageURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrap(err, "could not read device response")
+	}
+	body := string(bodyBytes)
+	// Basic check
+	if !strings.Contains(body, "<name>CloudPINPage</name>") {
+		return "", errors.New("unexpected response contents")
+	}
+	// Get status
+	statusRe := regexp.MustCompile("<state>([^<]+)</state>")
+	m := statusRe.FindStringSubmatch(body)
+	if len(m) < 2 {
+		return "", errors.Wrap(err, "could not parse device response")
+	}
+	return m[1], nil
 }
 
 func (s *SmartViewSession) postTVPairingStep(step int, data string) (string, error) {

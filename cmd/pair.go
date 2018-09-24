@@ -37,6 +37,9 @@ var pairCmd = &cobra.Command{
 	Use:   "pair",
 	Short: "Pair with a Smart TV",
 	Long:  `This command can be used to manage pairing with a Samsung TV.`,
+	Example: `  samtvcli pair              # Start pairing process
+  samtvcli pair --pin 1234   # Enter TV PIN code
+  samtvcli pair --pin -1     # A negative value closes the PIN page`,
 	Run: func(cmd *cobra.Command, args []string) {
 		s, err := samtv.NewSmartViewSession(server)
 		if err != nil {
