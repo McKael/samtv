@@ -53,27 +53,14 @@ func (s *SmartViewSession) Pair(pin int) (string, int, string, error) {
 		return "", 0, "", s.pairingPopup()
 	}
 
-	/*
-		_, err := s.pairingExternalStep(1, pin, "")
-		if err != nil {
-			return "", 0, "", err
-		}
-	*/
+	// _, err := s.pairingExternalStep(1, pin, "")
 	if err := s.pairingSteps(pin); err != nil {
 		return "", 0, "", err
 	}
 
 	// Done -- let's close PIN page
-	pinClosePageURL := "http://" + s.tvAddress + ":8080/ws/apps/CloudPINPage/run"
-	client := &http.Client{}
-	req, err := http.NewRequest("DELETE", pinClosePageURL, nil)
-	if err != nil {
-		logrus.Info(err) // DBG level
-	}
-	if resp, err := client.Do(req); err != nil {
+	if err := s.closePairingPopup(); err != nil {
 		logrus.Info("Could not close PIN page: ", err)
-	} else {
-		resp.Body.Close()
 	}
 
 	return s.uuid, s.sessionID, hex.EncodeToString(s.sessionKey), nil
@@ -83,6 +70,21 @@ func (s *SmartViewSession) getTVPairingStepURL(step int) string {
 	const appID = "samtvcli"
 	return "http://" + s.tvAddress + ":8080/ws/pairing?step=" + strconv.Itoa(step) +
 		"&app_id=" + appID + "&device_id=" + s.uuid + "&type=1"
+}
+
+func (s *SmartViewSession) closePairingPopup() error {
+	pinClosePageURL := "http://" + s.tvAddress + ":8080/ws/apps/CloudPINPage/run"
+	client := &http.Client{}
+	req, err := http.NewRequest("DELETE", pinClosePageURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return nil
 }
 
 func (s *SmartViewSession) pairingPopup() error {
