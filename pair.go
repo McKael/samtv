@@ -40,10 +40,12 @@ import (
 // smartAuthData contains Samsung's Smart TV auth_data response format
 type smartAuthData struct {
 	AuthType     string  `json:"auth_type"`
-	RequestID    string  `json:"request_id"`
-	SessionID    *string `json:"session_id"`
-	ClientHello  *string `json:"GeneratorClientHello"`
-	ClientAckMsg *string `json:"ClientAckMsg"`
+	RequestID    string  `json:"request_id,omitempty"`
+	SessionID    *string `json:"session_id,omitempty"`
+	ServerHello  *string `json:"GeneratorServerHello,omitempty"`
+	ClientHello  *string `json:"GeneratorClientHello,omitempty"`
+	ServerAckMsg *string `json:"ServerAckMsg,omitempty"`
+	ClientAckMsg *string `json:"ClientAckMsg,omitempty"`
 }
 
 // Pair handles pairing with the TV device
@@ -164,9 +166,9 @@ func (s *SmartViewSession) checkPINPage() (string, error) {
 	return m[1], nil
 }
 
-func (s *SmartViewSession) postTVPairingStep(step int, data string) (string, error) {
+func (s *SmartViewSession) postTVPairingStep(step int, data []byte) (string, error) {
 	stepURL := s.getTVPairingStepURL(step)
-	resp, err := http.Post(stepURL, "application/json", bytes.NewBufferString(data))
+	resp, err := http.Post(stepURL, "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to send data to the TV")
 	}
@@ -211,7 +213,15 @@ func (s *SmartViewSession) pairingSteps(pin int) error {
 	logrus.Debugf("Server ctx hash: %v", handshake.Ctx)
 	logrus.Debugf("ServerHello: %s", sh)
 
-	content := `{"auth_data":{"auth_type":"SPC","GeneratorServerHello":"` + sh + `"}}`
+	content, _ := json.Marshal(struct {
+		AuthData smartAuthData `json:"auth_data"`
+	}{
+		AuthData: smartAuthData{
+			AuthType:    "SPC",
+			ServerHello: &sh,
+		},
+	})
+	logrus.Debugf("Step #1 content: %s", string(content))
 
 	body, err := s.postTVPairingStep(1, content)
 	if err != nil {
@@ -251,8 +261,16 @@ func (s *SmartViewSession) pairingSteps(pin int) error {
 		return errors.Wrap(err, "failed to generate server acknowledge")
 	}
 
-	content = `{"auth_data":{"auth_type":"SPC","request_id":"` + lastRequestID + `","ServerAckMsg":"` + serverAck + `"}}`
-	logrus.Debugf("Step #2 content: %s", content)
+	content, _ = json.Marshal(struct {
+		AuthData smartAuthData `json:"auth_data"`
+	}{
+		AuthData: smartAuthData{
+			AuthType:     "SPC",
+			RequestID:    lastRequestID,
+			ServerAckMsg: &serverAck,
+		},
+	})
+	logrus.Debugf("Step #2 content: %s", string(content))
 
 	body, err = s.postTVPairingStep(2, content)
 	if err != nil {
