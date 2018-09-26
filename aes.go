@@ -84,16 +84,36 @@ func (s *SmartViewSession) aesDecrypt(cipherdata []byte) ([]byte, error) {
 		plainrange = plainrange[bs:]
 	}
 
-	// Remove padding
-	if i := bytes.IndexFunc(plaintext, func(r rune) bool {
-		if r < 16 {
-			return true
-		}
-		return false
-	}); i >= 0 {
-		plaintext = plaintext[:i]
+	// Note: there are null bytes _after_ the padding...
+	plaintext, err = pkcs7Unpad(bytes.TrimRight(plaintext, "\x00"), bs)
+	if err != nil {
+		return nil, err
 	}
-
 	logrus.Debugf("plain text: %#v", plaintext) // DBG XXX
 	return plaintext, nil
+}
+
+// pkcs7Unpad returns slice of the original data without padding
+func pkcs7Unpad(data []byte, bs int) ([]byte, error) {
+	if bs <= 0 {
+		return nil, errors.Errorf("invalid block size %d", bs)
+	}
+	if len(data)%bs != 0 || len(data) == 0 {
+		return nil, errors.Errorf("invalid data len %d", len(data))
+	}
+	padchar := data[len(data)-1]
+	padlen := int(padchar)
+	logrus.Debugf("data: %02x", data)     // DBG XXX
+	logrus.Debugf("padlen: %02x", padlen) // DBG XXX
+	if padlen > len(data) || padlen == 0 {
+		return nil, errors.New("invalid padding")
+	}
+	padstart := len(data) - padlen
+	for i := 0; i < padlen; i++ {
+		if data[padstart+1] != padchar {
+			return nil, errors.New("invalid padding char")
+		}
+	}
+
+	return data[:padstart], nil
 }
