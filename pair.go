@@ -248,7 +248,7 @@ func (s *SmartViewSession) pairingSteps(pin int) error {
 
 	skprime, ctx, err := smartcrypto.ParseClientHello(handshake, *step1Response.ClientHello)
 	if err != nil {
-		return errors.Wrap(err, "could not parse TV ClientHello")
+		return errors.Wrap(err, "TV ClientHello check failed")
 	}
 	logrus.Debugf("SKPrime: `%v`", skprime)
 	logrus.Debugf("ctx: `%v`", ctx)
