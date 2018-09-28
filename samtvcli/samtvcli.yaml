@@ -1,0 +1,10 @@
+---
+# Sample ~/.config/samtvcli/samtvcli.yaml configuration file
+keybindings: /home/me/.config/samtvcli/keybindings.yaml
+server: 192.168.1.50
+
+# (Use samtvcli pair to generate a session key)
+#session_key:  e7c2c2311b81e1f0d1ea35c24f7c92b5
+#device_uuid:  samtvcli
+#session_id:   1
+...
