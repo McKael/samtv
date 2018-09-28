@@ -1,8 +1,12 @@
 # samtvcli
 
-`samtvcli` is a network CLI remote for Samsung TVs from 2014-2015 (I think those are models H & J).
+`samtvcli` is a **network CLI remote** for Samsung TVs from 2014-2015
+(I think those are models H & J).
 
-You can use it to send keys with the command line or use its basic text user interface in a console.
+You can use it to send keys with the command line or use its basic text user
+interface in a console.
+
+You can also use `samtv` as a **Golang library** and build your own application.
 
 I have tested it with a Samsung UE48JU6000 TV.
 
@@ -23,7 +27,6 @@ To pair the application with the television, run
 % samtvcli pair --pin CODE
 ```
 
-
 Once paired, a basic text user interface can be used:
 ```
 % samtvcli tui
@@ -39,3 +42,9 @@ You can also use the command line and send several keys at once:
 ```
 % samtvcli key send KEY_MENU _ KEY_RETURN KEY_VOLUP
 ```
+
+Use the `help` command (or the generated [manpages](samtvcli/doc/manual/)
+for details.
+
+Free free to send me a message if you like the software.
+Pull requests are welcome.
