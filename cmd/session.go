@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"mikael/samtv"
+	"github.com/McKael/samtv"
 )
 
 // initSession creates a new SmartViewSession and initialies the connection

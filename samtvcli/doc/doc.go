@@ -26,7 +26,7 @@ import (
 
 	"github.com/spf13/cobra/doc"
 
-	"mikael/samtv/cmd"
+	"github.com/McKael/samtv/cmd"
 )
 
 func main() {

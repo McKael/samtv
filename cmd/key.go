@@ -28,7 +28,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"mikael/samtv"
+	"github.com/McKael/samtv"
 )
 
 var keyList *bool

@@ -20,7 +20,7 @@
 
 package main
 
-import "mikael/samtv/cmd"
+import "github.com/McKael/samtv/cmd"
 
 func main() {
 	cmd.Execute()

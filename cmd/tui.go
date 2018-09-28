@@ -34,7 +34,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"mikael/samtv"
+	"github.com/McKael/samtv"
 )
 
 var logHeight = 7 // Log window height

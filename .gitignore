@@ -1,5 +1,3 @@
-syntax: glob
-
 samtvcli/doc/doc
 samtvcli/doc/manual
 samtvcli/builds
