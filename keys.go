@@ -21,6 +21,7 @@
 package samtv
 
 import (
+	"encoding/json"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -344,8 +345,12 @@ func (s *SmartViewSession) sendKey(text string) error {
 
 	logrus.Debugf("TV message: `%s`", m)
 
-	if m != smartMessageUsualCorrectReply {
-		return errors.New("incorrect TV reply")
+	result, err := parseSmartMessageResult("{" + m)
+	if err != nil {
+		return errors.Wrap(err, "incorrect TV reply")
+	}
+	if result != "" {
+		logrus.Debugf("TV result: `%s`", result)
 	}
 
 	return nil
@@ -356,4 +361,29 @@ func (s *SmartViewSession) smartViewJSONBodyKeyPress(keyPressed string) string {
 	return `{"method":"POST","body":{"plugin":"RemoteControl","param1":"uuid:` +
 		s.uuid + `","param2":"Click","param3":"` + keyPressed +
 		`","param4":false,"api":"SendRemoteKey","version":"1.000"}}`
+}
+
+func parseSmartMessageResult(msg string) (string, error) {
+	res := struct {
+		Result json.RawMessage `json:"result"`
+	}{}
+	if err := json.Unmarshal([]byte(msg), &res); err != nil {
+		return "", errors.New("cannot parse message")
+	}
+
+	rs := string(res.Result)
+
+	// Empty result?
+	if rs == "{}" {
+		return "", nil
+	}
+
+	// Try to decode result as string
+	var s string
+	if err := json.Unmarshal(res.Result, &s); err == nil {
+		return s, nil
+	}
+
+	// Could not unmarshal; send the raw JSON result
+	return rs, nil
 }

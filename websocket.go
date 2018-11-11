@@ -36,8 +36,6 @@ const (
 	smartMessageHello      = "1::/com.samsung.companion"
 	smartMessageKeepalive  = "2::"
 	smartMessageCommPrefix = "5::/com.samsung.companion:"
-
-	smartMessageUsualCorrectReply = `"result":{}}`
 )
 
 func (s *SmartViewSession) openWSConnection() error {
