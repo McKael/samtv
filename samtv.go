@@ -40,9 +40,9 @@ type SmartViewSession struct {
 	sessionID  int    // Session ID
 
 	ws struct {
-		c     *websocket.Conn // Websocket Connection
-		read  chan string     // Websocket message reader
-		write chan string     // Websocket message writer
+		c    *websocket.Conn // Websocket Connection
+		read chan string     // Websocket message reader
+		//write chan string     // Websocket message writer
 		state int
 		mux   sync.Mutex
 	}
@@ -58,7 +58,7 @@ const (
 
 const defaultSessionUUID = "samtv"
 
-// XXX
+// NewSmartViewSession initializes en new SmartViewSession
 func NewSmartViewSession(tvAddress string) (SmartViewSession, error) {
 
 	if tvAddress == "" {
@@ -66,7 +66,7 @@ func NewSmartViewSession(tvAddress string) (SmartViewSession, error) {
 	}
 
 	// Basic check
-	if strings.IndexRune(tvAddress, ':') >= 0 {
+	if strings.ContainsRune(tvAddress, ':') {
 		return SmartViewSession{}, errors.New("the address should not contain a semicolon")
 	}
 
@@ -80,7 +80,7 @@ func NewSmartViewSession(tvAddress string) (SmartViewSession, error) {
 	return svs, nil
 }
 
-// XXX
+// RestoreSessionData sets SmartViewSession key, ID and UUID values
 func (s *SmartViewSession) RestoreSessionData(sessionKey []byte, sessionID int, uuid string) {
 	if sessionKey != nil {
 		s.sessionKey = sessionKey
