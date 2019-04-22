@@ -59,15 +59,15 @@ const (
 const defaultSessionUUID = "samtv"
 
 // NewSmartViewSession initializes en new SmartViewSession
-func NewSmartViewSession(tvAddress string) (SmartViewSession, error) {
+func NewSmartViewSession(tvAddress string) (*SmartViewSession, error) {
 
 	if tvAddress == "" {
-		return SmartViewSession{}, errors.New("empty TV IP address")
+		return nil, errors.New("empty TV IP address")
 	}
 
 	// Basic check
 	if strings.ContainsRune(tvAddress, ':') {
-		return SmartViewSession{}, errors.New("the address should not contain a semicolon")
+		return nil, errors.New("the address should not contain a semicolon")
 	}
 
 	svs := SmartViewSession{
@@ -77,7 +77,7 @@ func NewSmartViewSession(tvAddress string) (SmartViewSession, error) {
 
 	svs.ws.read = make(chan string, 16)
 
-	return svs, nil
+	return &svs, nil
 }
 
 // RestoreSessionData sets SmartViewSession key, ID and UUID values

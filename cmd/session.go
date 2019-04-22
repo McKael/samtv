@@ -34,5 +34,5 @@ func initSession() (*samtv.SmartViewSession, error) {
 	s.RestoreSessionData(sessionKey, smartSessionID, smartDeviceID)
 
 	err = s.InitSession()
-	return &s, err
+	return s, err
 }
