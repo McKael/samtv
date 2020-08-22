@@ -328,7 +328,7 @@ func (s *SmartViewSession) sendKey(text string) error {
 		if i > 0 {
 			body += ", "
 		}
-		body = body + strconv.Itoa(int(n))
+		body += strconv.Itoa(int(n))
 	}
 
 	// Build and send message

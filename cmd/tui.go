@@ -208,30 +208,32 @@ Dynamic bindings:
 func setupKeyBindings(g *gocui.Gui, samtvs *samtv.SmartViewSession, keyBindings map[string]string) error {
 	var errs []error
 
-	errs = append(errs, g.SetKeybinding("", gocui.KeyCtrlQ, gocui.ModNone, uiQuit))
+	errs = append(errs,
+		g.SetKeybinding("", gocui.KeyCtrlQ, gocui.ModNone, uiQuit),
 
-	errs = append(errs, g.SetKeybinding("main", gocui.KeyPgup, gocui.ModNone, scrollPageUp))
-	errs = append(errs, g.SetKeybinding("main", gocui.KeyPgdn, gocui.ModNone, scrollPageDown))
+		g.SetKeybinding("main", gocui.KeyPgup, gocui.ModNone, scrollPageUp),
+		g.SetKeybinding("main", gocui.KeyPgdn, gocui.ModNone, scrollPageDown),
 
-	// XXX hardcoded
-	errs = append(errs, g.SetKeybinding("main", gocui.KeyEnter, gocui.ModNone,
-		genKeyhandler(samtvs, "KEY_ENTER")))
-	errs = append(errs, g.SetKeybinding("main", gocui.KeyBackspace, gocui.ModNone,
-		genKeyhandler(samtvs, "KEY_RETURN")))
-	errs = append(errs, g.SetKeybinding("main", gocui.KeyBackspace2, gocui.ModNone,
-		genKeyhandler(samtvs, "KEY_RETURN")))
-	errs = append(errs, g.SetKeybinding("main", gocui.KeySpace, gocui.ModNone,
-		genKeyhandler(samtvs, "KEY_PLAY")))
-	errs = append(errs, g.SetKeybinding("main", gocui.KeyArrowLeft, gocui.ModNone,
-		genKeyhandler(samtvs, "KEY_LEFT")))
-	errs = append(errs, g.SetKeybinding("main", gocui.KeyArrowDown, gocui.ModNone,
-		genKeyhandler(samtvs, "KEY_DOWN")))
-	errs = append(errs, g.SetKeybinding("main", gocui.KeyArrowUp, gocui.ModNone,
-		genKeyhandler(samtvs, "KEY_UP")))
-	errs = append(errs, g.SetKeybinding("main", gocui.KeyArrowRight, gocui.ModNone,
-		genKeyhandler(samtvs, "KEY_RIGHT")))
+		// XXX hardcoded
+		g.SetKeybinding("main", gocui.KeyEnter, gocui.ModNone,
+			genKeyhandler(samtvs, "KEY_ENTER")),
+		g.SetKeybinding("main", gocui.KeyBackspace, gocui.ModNone,
+			genKeyhandler(samtvs, "KEY_RETURN")),
+		g.SetKeybinding("main", gocui.KeyBackspace2, gocui.ModNone,
+			genKeyhandler(samtvs, "KEY_RETURN")),
+		g.SetKeybinding("main", gocui.KeySpace, gocui.ModNone,
+			genKeyhandler(samtvs, "KEY_PLAY")),
+		g.SetKeybinding("main", gocui.KeyArrowLeft, gocui.ModNone,
+			genKeyhandler(samtvs, "KEY_LEFT")),
+		g.SetKeybinding("main", gocui.KeyArrowDown, gocui.ModNone,
+			genKeyhandler(samtvs, "KEY_DOWN")),
+		g.SetKeybinding("main", gocui.KeyArrowUp, gocui.ModNone,
+			genKeyhandler(samtvs, "KEY_UP")),
+		g.SetKeybinding("main", gocui.KeyArrowRight, gocui.ModNone,
+			genKeyhandler(samtvs, "KEY_RIGHT")),
 
-	errs = append(errs, g.SetKeybinding("main", gocui.KeyCtrlSlash, gocui.ModNone, uiToggleDebug))
+		g.SetKeybinding("main", gocui.KeyCtrlSlash, gocui.ModNone, uiToggleDebug),
+	)
 
 	if keyBindings != nil {
 		for k, code := range keyBindings {
