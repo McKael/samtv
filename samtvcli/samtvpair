@@ -1,0 +1,79 @@
+#! /bin/zsh
+#
+# This is a helper script to do interactive pairing and update
+# the samtvcli configuration file with the new key.
+#
+# Mikael BERTHE
+
+# Path to the samtvcli utility
+STVCLI="samtvcli"
+
+CONFIGFILE="$HOME/.config/samtvcli/samtvcli.yaml"
+
+if [[ ! -f $CONFIGFILE ]]; then
+    echo "Configuration file '$CONFIGFILE' not found">&2
+    exit 1
+fi
+
+# Initiate pairing
+"$STVCLI" pair || exit
+
+# Request PIN code and try to pair with TV device
+while :
+do
+    integer pin
+    echo -n "PIN code: "
+    read pin || exit
+    pairing_output="$("$STVCLI" pair --pin $pin)"
+    (( $? )) || break   # Loop until success
+done
+
+# Get new fields
+lines=( "${(f)pairing_output}" )
+s_key=${(M)lines:#session_key: *}
+s_id=${(M)lines:#session_id: *}
+d_id=${(M)lines:#device_uuid: *}
+
+if [[ -z $s_key || -z $s_id || -z $d_id ]]; then
+    echo "Unexpected output (missing fields)">&2
+    exit 1
+fi
+
+# Backup the configuration file
+cp -a "$CONFIGFILE" "$CONFIGFILE.bak"
+
+integer line_added=0
+
+# Update/Add session key
+if ! grep -q ^session_key: "$CONFIGFILE"; then
+    echo "$s_key" >> "$CONFIGFILE"
+    (( line_added++ ))
+else
+    sed -i -e "s/^session_key:.*\$/$s_key/" "$CONFIGFILE"
+fi
+
+# Update/Add session ID
+if ! grep -q ^session_id: "$CONFIGFILE"; then
+    echo "$s_id" >> "$CONFIGFILE"
+    (( line_added++ ))
+else
+    sed -i -e "s/^session_id:.*\$/$s_id/" "$CONFIGFILE"
+fi
+
+# Update/Add device ID
+if ! grep -q ^device_uuid: "$CONFIGFILE"; then
+    echo "$d_id" >> "$CONFIGFILE"
+    (( line_added++ ))
+else
+    sed -i -e "s/^device_uuid:.*\$/$d_id/" "$CONFIGFILE"
+fi
+
+# Check if the file had a "..."
+if (( line_added )) && grep -q '^\.\.\.$' "$CONFIGFILE"; then
+    # Move end of file YAML marker
+    sed -i -e '/^\.\.\.$/d' "$CONFIGFILE"
+    echo "..." >> "$CONFIGFILE"
+fi
+
+# Display changes
+diff -U0 "$CONFIGFILE.bak" "$CONFIGFILE"
