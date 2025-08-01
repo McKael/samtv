@@ -117,13 +117,13 @@ func tuiListKeyBindings(maxWidth int) string {
 		if displayed == n {
 			break
 		}
-		fmt.Fprintf(&b, strings.Repeat(" ", colW-4-len(k)-len(a)))
+		fmt.Fprint(&b, strings.Repeat(" ", colW-4-len(k)-len(a)))
 	}
 
 	return b.String()
 }
 
-func getKeyFromString(k string) (interface{}, error) {
+func getKeyFromString(k string) (any, error) {
 	if len(k) == 1 {
 		return rune(k[0]), nil
 	}

@@ -31,7 +31,7 @@ import (
 
 type commMessage struct {
 	Name string
-	Args interface{}
+	Args any
 	/* struct {
 		SessionID int	`json:"Session_Id"`
 		Body string	`json:"body"`

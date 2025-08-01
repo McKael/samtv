@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -117,7 +117,7 @@ func (s *SmartViewSession) openPINPage() error {
 
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return errors.Wrap(err, "could not read device response")
 	}
@@ -148,7 +148,7 @@ func (s *SmartViewSession) checkPINPage() (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", errors.Wrap(err, "could not read device response")
 	}
@@ -175,7 +175,7 @@ func (s *SmartViewSession) postTVPairingStep(step int, data []byte) (string, err
 
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", errors.Wrap(err, "could not read device response")
 	}

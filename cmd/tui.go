@@ -24,7 +24,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -39,7 +38,6 @@ import (
 
 var logHeight = 7 // Log window height
 
-var tuiKeybindingsConfigFile *string
 var tuiLogFile *string
 var tuiLogWriter *io.PipeWriter
 
@@ -54,7 +52,7 @@ var tuiCmd = &cobra.Command{
 		keybindingsFile := viper.GetString("keybindings")
 		if keybindingsFile != "" {
 			// User-provided bindings
-			cfbytes, err := ioutil.ReadFile(keybindingsFile)
+			cfbytes, err := os.ReadFile(keybindingsFile)
 			if err != nil {
 				logrus.Fatal("Could not read key bindings configuration file: ", err)
 			}
@@ -82,8 +80,8 @@ func init() {
 	RootCmd.AddCommand(tuiCmd)
 
 	tuiLogFile = tuiCmd.Flags().String("log-file", "", "Write logs to file")
-	tuiKeybindingsConfigFile = tuiCmd.Flags().String("keybindings", "",
-		"Path to keybindings config file (YAML)")
+	// var tuiKeybindingsConfigFile *string (not used)
+	_ = tuiCmd.Flags().String("keybindings", "", "Path to keybindings config file (YAML)")
 
 	viper.BindPFlag("keybindings", tuiCmd.Flags().Lookup("keybindings"))
 }
@@ -136,8 +134,6 @@ func tui(samtvSession *samtv.SmartViewSession) {
 	if err != nil && err != gocui.ErrQuit {
 		logrus.Fatal(err)
 	}
-
-	return
 }
 
 func layout(g *gocui.Gui) error {
@@ -235,17 +231,15 @@ func setupKeyBindings(g *gocui.Gui, samtvs *samtv.SmartViewSession, keyBindings 
 		g.SetKeybinding("main", gocui.KeyCtrlSlash, gocui.ModNone, uiToggleDebug),
 	)
 
-	if keyBindings != nil {
-		for k, code := range keyBindings {
-			// Check k validity
-			kr, err := getKeyFromString(k)
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-			errs = append(errs, g.SetKeybinding("main", kr,
-				gocui.ModNone, genKeyhandler(samtvs, code)))
+	for k, code := range keyBindings {
+		// Check k validity
+		kr, err := getKeyFromString(k)
+		if err != nil {
+			errs = append(errs, err)
+			continue
 		}
+		errs = append(errs, g.SetKeybinding("main", kr,
+			gocui.ModNone, genKeyhandler(samtvs, code)))
 	}
 
 	for _, err := range errs {
@@ -261,7 +255,7 @@ func uiQuit(g *gocui.Gui, v *gocui.View) error {
 	return gocui.ErrQuit
 }
 
-func printLog(g *gocui.Gui, format string, args ...interface{}) {
+func printLog(g *gocui.Gui, format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
 	if g == nil {
 		fmt.Println(message)

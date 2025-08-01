@@ -109,7 +109,7 @@ func pkcs7Unpad(data []byte, bs int) ([]byte, error) {
 		return nil, errors.New("invalid padding")
 	}
 	padstart := len(data) - padlen
-	for i := 0; i < padlen; i++ {
+	for range padlen {
 		if data[padstart+1] != padchar {
 			return nil, errors.New("invalid padding char")
 		}
