@@ -75,8 +75,11 @@ func (s *SmartViewSession) openWSConnection() error {
 }
 
 func (s *SmartViewSession) manageWS() {
+	if s == nil {
+		logrus.Fatal("manageWS: websocket connection is closed")
+	}
 	s.ws.mux.Lock()
-	if s == nil || s.ws.c == nil {
+	if s.ws.c == nil {
 		s.ws.mux.Unlock()
 		logrus.Debugf("manageWS: websocket connection is closed")
 		return
